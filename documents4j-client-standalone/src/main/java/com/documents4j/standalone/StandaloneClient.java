@@ -171,6 +171,7 @@ public class StandaloneClient {
         OptionSpec<?> sslSpec = makeSslSpec(optionParser);
         ArgumentAcceptingOptionSpec<String> authSpec = makeAuthSpec(optionParser);
 
+        ArgumentAcceptingOptionSpec<String> authSpec = makeAuthSpec(optionParser);
         ArgumentAcceptingOptionSpec<File> logFileSpec = makeLogFileSpec(optionParser);
         ArgumentAcceptingOptionSpec<Level> logLevelSpec = makeLogLevelSpec(optionParser);
 
@@ -227,6 +228,11 @@ public class StandaloneClient {
                 System.out.println("Could not access default SSL context: " + e.getMessage());
                 System.exit(-1);
             }
+        }
+        final String userPass = authSpec.value(optionSet);
+        if (userPass != null && userPass.contains(":")) {
+            final String[] userPassArray = userPass.split(":", 2);
+            builder.basicAuthenticationCredentials(userPassArray[0], userPassArray[1]);
         }
         return builder.build();
     }
