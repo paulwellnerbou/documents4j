@@ -16,7 +16,7 @@ public class StandaloneClientIT {
     @Test
     public void main() throws IOException {
         final StandaloneClientOptions options = new StandaloneClientOptions();
-        options.baseUri = URI.create("http://localhost:8080");
+        options.baseUri = URI.create("http://localhost:8443");
         IConverter converter = StandaloneClient.asConverter(options);
 
         final InputStream docxInputStream = this.getClass().getResourceAsStream("/Document.docx");

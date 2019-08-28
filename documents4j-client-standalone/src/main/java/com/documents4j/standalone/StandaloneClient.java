@@ -169,6 +169,7 @@ public class StandaloneClient {
         NonOptionArgumentSpec<URI> baseUriSpec = makeBaseUriSpec(optionParser);
         ArgumentAcceptingOptionSpec<Long> requestTimeoutSpec = makeRequestTimeoutSpec(optionParser);
         OptionSpec<?> sslSpec = makeSslSpec(optionParser);
+        ArgumentAcceptingOptionSpec<String> authSpec = makeAuthSpec(optionParser);
 
         ArgumentAcceptingOptionSpec<File> logFileSpec = makeLogFileSpec(optionParser);
         ArgumentAcceptingOptionSpec<Level> logLevelSpec = makeLogLevelSpec(optionParser);
@@ -201,6 +202,12 @@ public class StandaloneClient {
         options.logLevel = logLevelSpec.value(optionSet);
 
         options.hasSsl = optionSet.has(sslSpec);
+        final String userPass = authSpec.value(optionSet);
+        if (userPass != null && userPass.contains(":")) {
+            final String[] userPassArray = userPass.split(":", 2);
+            options.userName = userPassArray[0];
+            options.password = userPassArray[1];
+        }
         return options;
     }
 
@@ -210,6 +217,9 @@ public class StandaloneClient {
         RemoteConverter.Builder builder = RemoteConverter.builder()
                 .requestTimeout(options.requestTimeout, TimeUnit.MILLISECONDS)
                 .baseUri(options.baseUri);
+        if (options.userName != null) {
+            builder.basicAuthenticationCredentials(options.userName, options.password);
+        }
         if (options.hasSsl) {
             try {
                 builder = builder.sslContext(SSLContext.getDefault());
@@ -317,6 +327,16 @@ public class StandaloneClient {
                         CommandDescription.ARGUMENT_SHORT_SSL),
                         CommandDescription.DESCRIPTION_CONTEXT_SSL
                 );
+    }
+
+    private static ArgumentAcceptingOptionSpec<String> makeAuthSpec(OptionParser optionParser) {
+        return optionParser
+                .acceptsAll(Arrays.asList(
+                        CommandDescription.ARGUMENT_LONG_AUTH,
+                        CommandDescription.ARGUMENT_SHORT_AUTH),
+                        CommandDescription.DESCRIPTION_CONTEXT_AUTH
+                ).withRequiredArg()
+                .ofType(String.class);
     }
 
     private static ArgumentAcceptingOptionSpec<Level> makeLogLevelSpec(OptionParser optionParser) {

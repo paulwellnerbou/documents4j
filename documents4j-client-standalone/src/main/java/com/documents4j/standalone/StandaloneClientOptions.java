@@ -7,20 +7,11 @@ import java.net.URI;
 
 public class StandaloneClientOptions {
 
-    public Level logLevel = Level.DEBUG;
+    public Level logLevel = Level.INFO;
     public File logFile;
     public Long requestTimeout = 10_000L;
     public URI baseUri;
     public boolean hasSsl;
-
-    @Override
-    public String toString() {
-        return "StandaloneClientOptions{" +
-                "logLevel=" + logLevel +
-                ", logFile=" + logFile +
-                ", requestTimeout=" + requestTimeout +
-                ", baseUri=" + baseUri +
-                ", hasSsl=" + hasSsl +
-                '}';
-    }
+    public String userName;
+    public String password;
 }
