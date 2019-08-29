@@ -169,7 +169,6 @@ public class StandaloneClient {
         NonOptionArgumentSpec<URI> baseUriSpec = makeBaseUriSpec(optionParser);
         ArgumentAcceptingOptionSpec<Long> requestTimeoutSpec = makeRequestTimeoutSpec(optionParser);
         OptionSpec<?> sslSpec = makeSslSpec(optionParser);
-        ArgumentAcceptingOptionSpec<String> authSpec = makeAuthSpec(optionParser);
 
         ArgumentAcceptingOptionSpec<String> authSpec = makeAuthSpec(optionParser);
         ArgumentAcceptingOptionSpec<File> logFileSpec = makeLogFileSpec(optionParser);
@@ -229,10 +228,9 @@ public class StandaloneClient {
                 System.exit(-1);
             }
         }
-        final String userPass = authSpec.value(optionSet);
-        if (userPass != null && userPass.contains(":")) {
-            final String[] userPassArray = userPass.split(":", 2);
-            builder.basicAuthenticationCredentials(userPassArray[0], userPassArray[1]);
+
+        if (options.userName != null && !options.userName.isBlank()) {
+            builder.basicAuthenticationCredentials(options.userName, options.password);
         }
         return builder.build();
     }
