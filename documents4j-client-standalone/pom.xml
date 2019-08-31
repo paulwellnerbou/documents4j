@@ -5,7 +5,7 @@
     <parent>
         <artifactId>documents4j-parent</artifactId>
         <groupId>com.documents4j</groupId>
-        <version>1.0.4-bryter-3</version>
+        <version>1.0.4-bryter-4</version>
     </parent>
 
     <artifactId>documents4j-client-standalone</artifactId>
