@@ -229,7 +229,7 @@ public class StandaloneClient {
             }
         }
 
-        if (options.userName != null && !options.userName.isBlank()) {
+        if (options.userName != null && !options.userName.isEmpty()) {
             builder.basicAuthenticationCredentials(options.userName, options.password);
         }
         return builder.build();
