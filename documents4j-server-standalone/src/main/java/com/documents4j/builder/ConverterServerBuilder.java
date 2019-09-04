@@ -6,6 +6,8 @@ import com.documents4j.server.auth.AuthFilter;
 import com.documents4j.ws.application.IWebConverterConfiguration;
 import com.documents4j.ws.application.StandaloneWebConverterConfiguration;
 import com.documents4j.ws.application.WebConverterApplication;
+import com.documents4j.ws.endpoint.MonitoringHealthResource;
+import com.documents4j.ws.endpoint.MonitoringRunningResource;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -17,6 +19,8 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -30,15 +34,27 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ConverterServerBuilder {
 
     private final Map<Class<? extends IExternalConverter>, Boolean> converterConfiguration;
+
     private URI baseUri;
+
     private File baseFolder = null;
+
     private SSLContext sslContext;
+
     private int corePoolSize = LocalConverter.Builder.DEFAULT_CORE_POOL_SIZE;
+
     private int maximumPoolSize = LocalConverter.Builder.DEFAULT_MAXIMUM_POOL_SIZE;
+
     private long keepAliveTime = LocalConverter.Builder.DEFAULT_KEEP_ALIVE_TIME;
+
     private long processTimeout = LocalConverter.Builder.DEFAULT_PROCESS_TIME_OUT;
+
     private long requestTimeout = IWebConverterConfiguration.DEFAULT_REQUEST_TIMEOUT;
     private String userPass;
+
+    private String userPass;
+
+    private boolean serviceMode;
 
     private ConverterServerBuilder() {
         converterConfiguration = new HashMap<Class<? extends IExternalConverter>, Boolean>();
@@ -158,7 +174,7 @@ public class ConverterServerBuilder {
      * Returns the specified process time out in milliseconds.
      *
      * @param processTimeout process timeout
-     * @param timeUnit time unit
+     * @param timeUnit       time unit
      * @return The process time out in milliseconds.
      */
     public ConverterServerBuilder processTimeout(long processTimeout, TimeUnit timeUnit) {
@@ -204,6 +220,18 @@ public class ConverterServerBuilder {
     }
 
     /**
+     * Enables or disables service mode where {@link System#in} is not used.
+     *
+     * @param serviceMode {@code true} if service mode is enabled.
+     * @return This builder.
+     */
+    public ConverterServerBuilder serviceMode(boolean serviceMode) {
+        checkNotNull(sslContext);
+        this.serviceMode = serviceMode;
+        return this;
+    }
+
+    /**
      * Creates the conversion server that is specified by this builder.
      *
      * @return The conversion server that is specified by this builder.
@@ -215,14 +243,19 @@ public class ConverterServerBuilder {
         // and directly in order to trigger life cycle methods on the deployment container.
         ResourceConfig resourceConfig = ResourceConfig
                 .forApplication(new WebConverterApplication(configuration))
-                .register(configuration);
+                .register(configuration)
+                .register(MonitoringHealthResource.class)
+                .register(MonitoringRunningResource.class);
         if (userPass != null) {
-            resourceConfig.register(new AuthFilter(userPass));
+            resourceConfig.register(new AuthFilter(userPass, Stream.of(MonitoringHealthResource.PATH, MonitoringRunningResource.PATH)
+                    .map(pattern -> "^" + pattern + "$")
+                    .collect(Collectors.toSet())));
         }
         if (sslContext == null) {
             return GrizzlyHttpServerFactory.createHttpServer(baseUri, resourceConfig);
         } else {
-            return GrizzlyHttpServerFactory.createHttpServer(baseUri, resourceConfig, true,
+            return GrizzlyHttpServerFactory.createHttpServer(baseUri, resourceConfig,
+                    true,
                     new SSLEngineConfigurator(sslContext).setClientMode(false));
         }
     }
@@ -296,6 +329,15 @@ public class ConverterServerBuilder {
      */
     public long getRequestTimeout() {
         return requestTimeout;
+    }
+
+    /**
+     * Returns {@code true} if the conversion server is run in service mode.
+     *
+     * @return {@code true} if the conversion server is run in service mode.
+     */
+    public boolean isServiceMode() {
+        return serviceMode;
     }
 
     private static void assertNumericArgument(long number, boolean zeroAllowed) {

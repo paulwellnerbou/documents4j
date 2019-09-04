@@ -10,6 +10,7 @@ import ch.qos.logback.core.OutputStreamAppender;
 import ch.qos.logback.core.rolling.FixedWindowRollingPolicy;
 import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy;
+import ch.qos.logback.core.util.FileSize;
 import com.documents4j.builder.ConverterServerBuilder;
 import com.documents4j.conversion.IExternalConverter;
 import com.documents4j.job.LocalConverter;
@@ -54,22 +55,22 @@ public class StandaloneServer {
             Logger logger = LoggerFactory.getLogger(StandaloneServer.class);
             try {
                 sayHello(builder, logger);
-                System.out.println("The documents4j server is up and running. Hit Ctrl+C to stop.");
-
-                final CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                if (builder.isServiceMode()) {
+                    System.out.println("The documents4j server is up and running in service mode and will not terminate until process interruption.");
                     try {
-                        cyclicBarrier.await();
-                    } catch (InterruptedException | BrokenBarrierException e) {
-                        throw new RuntimeException(e);
+                        Thread.currentThread().join();
+                    } catch (InterruptedException ignored) {
+                        System.out.println("Received interruption signal which indicates server termination.");
                     }
-                }));
-                cyclicBarrier.await();
-            } finally {
+                } else {
+                    System.out.println("The documents4j server is up and running. Hit the enter key to shut it down...");
+                    if (System.in.read() == -1) {
+                        System.out.println("Console read terminated without receiving user input");
+                    }
+                }
                 sayGoodbye(builder, logger);
-                System.out.println("Shutting down...");
+            } finally {
                 httpServer.shutdownNow();
-                System.out.println("Successful.");
             }
             System.out.println("Shut down successful. Goodbye!");
         } catch (Exception e) {
@@ -87,6 +88,8 @@ public class StandaloneServer {
         OptionSpec<?> helpSpec = makeHelpSpec(optionParser);
 
         NonOptionArgumentSpec<URI> baseUriSpec = makeBaseUriSpec(optionParser);
+
+        OptionSpec<?> serviceModeSpec = makeServiceModeSpec(optionParser);
 
         ArgumentAcceptingOptionSpec<File> baseFolderSpec = makeBaseFolderSpec(optionParser);
         ArgumentAcceptingOptionSpec<Integer> corePoolSizeSpec = makeCorePoolSizeSpec(optionParser);
@@ -124,6 +127,8 @@ public class StandaloneServer {
             System.out.println("No base URI parameter specified. (Use: <command> <base URI>)");
             System.exit(-1);
         }
+
+        boolean serviceMode = optionSet.has(serviceModeSpec);
 
         File baseFolder = baseFolderSpec.value(optionSet);
         checkArgument(baseFolder == null || baseFolder.exists(), "The specified base folder cannot be located on the file system");
@@ -166,7 +171,7 @@ public class StandaloneServer {
         if (optionSet.hasArgument(authSpec)) {
             builder.userPass(authSpec.value(optionSet));
         }
-        return builder;
+        return builder.serviceMode(serviceMode);
     }
 
     private static void configureLogging(File logFile, Level level) {
@@ -218,7 +223,7 @@ public class StandaloneServer {
         fixedWindowRollingPolicy.setContext(loggerContext);
         fixedWindowRollingPolicy.setParent(rollingFileAppender);
         SizeBasedTriggeringPolicy<ILoggingEvent> sizeBasedTriggeringPolicy = new SizeBasedTriggeringPolicy<ILoggingEvent>();
-        sizeBasedTriggeringPolicy.setMaxFileSize(LogDescription.MAXIMUM_LOG_FILE_SIZE);
+        sizeBasedTriggeringPolicy.setMaxFileSize(FileSize.valueOf(LogDescription.MAXIMUM_LOG_FILE_SIZE));
         sizeBasedTriggeringPolicy.setContext(loggerContext);
         rollingFileAppender.setRollingPolicy(fixedWindowRollingPolicy);
         rollingFileAppender.setTriggeringPolicy(sizeBasedTriggeringPolicy);
@@ -387,6 +392,15 @@ public class StandaloneServer {
                         CommandDescription.DESCRIPTION_CONTEXT_HELP
                 )
                 .forHelp();
+    }
+
+    private static OptionSpec<Void> makeServiceModeSpec(OptionParser optionParser) {
+        return optionParser
+                .acceptsAll(Arrays.asList(
+                        CommandDescription.ARGUMENT_LONG_SERVICE_MODE,
+                        CommandDescription.ARGUMENT_SHORT_SERVICE_MODE),
+                        CommandDescription.DESCRIPTION_CONTEXT_SERVICE_MODE
+                );
     }
 
     private static void sayHello(ConverterServerBuilder builder, Logger logger) {

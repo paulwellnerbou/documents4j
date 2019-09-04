@@ -2,7 +2,7 @@ package com.documents4j.ws.application;
 
 import com.documents4j.ws.endpoint.ConverterResource;
 import com.documents4j.ws.endpoint.MonitoringResource;
-import org.glassfish.jersey.internal.inject.AbstractBinder;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.message.GZipEncoder;
 import org.glassfish.jersey.server.filter.EncodingFilter;
 
