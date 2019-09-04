@@ -50,7 +50,6 @@ public class ConverterServerBuilder {
     private long processTimeout = LocalConverter.Builder.DEFAULT_PROCESS_TIME_OUT;
 
     private long requestTimeout = IWebConverterConfiguration.DEFAULT_REQUEST_TIMEOUT;
-    private String userPass;
 
     private String userPass;
 
