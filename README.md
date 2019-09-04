@@ -120,27 +120,28 @@ java -jar documents4j-client-standalone-<VERSION>-shaded.jar http://localhost:99
 Again, the `-?` option can be supplied for obtaining a list of options.
 
 #### Encryption ####
-If a document conversion is realized via an insecure connection, it is possible to specify a `SSLContext` to secure the connection between conversion server and client. 
 
-The standalone implementations of server and client converters can use the `SSLContext.getDefault()` instance for establishing a connection by setting the `-ssl` parameter on startup. The [default trust store and key store configuration](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization) can be adjusted by setting `javax.net.ssl.*` system properties when running a standalone application from the console. The allowed encryption algorithms can be adjusted by setting `https.protocols` property.
+ It is possible to use a SSL connection between the client and server by specifying a `SSLContext` in the server.
+
+TThe standalone implementations of server and client converters are capable of using `SSLContext.getDefault()` for establishing a connection by setting the `-ssl` parameter on startup. The [default trust store and key store configuration](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#InstallationAndCustomization)) can be adjusted by setting `javax.net.ssl.*` system properties when running a standalone application from the console. The allowed encryption algorithms can be adjusted by setting the `https.protocols` property.
 
 To run the standalone server with SSL support:
 
-1. Import your certificate into a keystore. `keytool` does not support importing certificates directly, you have to bundle them before with `openssl`.
+1. Import your certificate into a keystore. `keytool` does not support importing certificates directly, therefore, you have to bundle them first using `openssl`:
    ```
    openssl pkcs12 -export -in /path/to/your/cert.crt -inkey /path/to/your/cert.key -name serverCert -out /tmp/keystore-PKCS-12.p12 -password pass:yourPassword
    keytool -importkeystore -noprompt -deststorepass yourPassword -srcstorepass yourPassword -destkeystore /path/to/your/keystore -srckeystore /tmp/keystore-PKCS-12.p12
    ```
-2. Run the server with the given key store
+2. Afterwards, run the server with the given key store:
    ```
    java -jar documents4j-client-standalone-<VERSION>-shaded.jar https://0.0.0.0:8443 -ssl -Djavax.net.ssl.keyStore=/path/to/your/keystore -Djavax.net.ssl.keyStorePassword=yourPassword
    ```
 
-While `yourPassword` can be any chosen password, but is required.
+A password such as `yourPassword` can be any chosen freely but is required.
 
 #### Authentication ####
 
-The server can be started with basic authentication support with `-auth user:pass`.
+The standalone server can be started with basic authentication support with `-auth user:pass`.
 
 Aggregating converter
 ----------------
@@ -195,9 +196,12 @@ All logging is delegated to the [SLF4J](http://www.slf4j.org) facade and can the
 Monitoring
 ----------
 
-There is a monitoring endpoint `/health` returning `200 OK` if the converter server is operational and `500 Internal Server Error` otherwise.
+documents4j registers two monitoring endpoints:
 
-This allows load balancers only able to check simple health requests and HTTP status codes (e.g. AWS Load balancer) to decide if this server is healthy or not.
+* Health endpoint under `/health` returning *200 OK* if the converter server is operational and *500 Internal Server Error* otherwise.
+* Running endpoint under `/running` returning always *200 OK*.
+
+Both endpoints are always unprotected, even if the documents4j runs with basic authentication.
 
 Troubleshooting
 ---------------
@@ -237,17 +241,16 @@ When running the standalone server, you should also start it in service mode by 
 Windows service - troubleshooting
 --------------------------
 
-1. For those that are experiencing requests jammed by a MS Office window reporting that some previous conversion failed, you can use MS bat script to looking for those windows and close them by script over Windows' Task Scheduler. First create a .bat file with these commands and add it to new task to run every minute (yes, every minute):
-```
-taskkill /F /FI "WindowTitle eq Microsoft Word*"
-taskkill /F /FI "WindowTitle eq Microsoft Office*"
-```
-2. For those that are experiencing multiples instances of msword and wsscript on task manager, all of them as zombies, you can use MS bat script to kill them by script over Windows' Task Scheduler. First create a .bat file with these commands, then, add it to new task to run every day at 6AM (for instance). Attention! Current conversions will fail when this script been triggered, so, choose an idle time for your application:
-
-```
-taskkill /f /t /im wscript.exe
-taskkill /f /t /im winword.exe
-```
+1. If you are experiencing requests jammed by a MS Office window reporting stating that some previous conversion failed, you can use MS bat script for looking those windows and close them over Windows' task scheduler. First create a .bat file with these commands and add it as a new task to run every minute:
+    ```
+    taskkill /F /FI "WindowTitle eq Microsoft Word*"
+    taskkill /F /FI "WindowTitle eq Microsoft Office*"
+    ```
+2. For those that are experiencing multiples instances of msword and wsscript on task manager, all of them as zombies, you can use MS bat script to kill them by script over Windows' task scheduler. First create a *.bat* file with these commands, then, add it to new task to run every day at 6AM (for instance). Attention: current conversions will fail when this script been triggered, therefore, choose an idle time for the script application:
+    ```
+    taskkill /f /t /im wscript.exe
+    taskkill /f /t /im winword.exe
+    ```
 
 Building the project
 --------------------
@@ -259,7 +262,7 @@ mvn package -Pms-office
  
 When you are testing native converters such as the `MicrosoftWordBridge` or the `MicrosoftExcelBridge`, do not forget to keep an eye on your task manager. Consider an alternative to the default task manager such as [Process Explorer](http://technet.microsoft.com/en-us/sysinternals/bb896653.aspx) for debugging purposes. For monitoring network connections, I recommend [TCPView](http://technet.microsoft.com/de-de/sysinternals/bb897437.aspx). 
 
-Several time consuming operations such as building source code and javadoc artifacts as well as building the shaded jar for the standalone server are only executed when the corresponding profiles (`shaded-jar`, `source`, `javadoc`) are active.
+Several time consuming operations such as building source code and javadoc artifacts as well as building the shaded jar for the standalone server are only executed when the corresponding profile `extras` is active.
 
 [![Build Status](https://travis-ci.org/documents4j/documents4j.svg)](https://travis-ci.org/documents4j/documents4j)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.documents4j/documents4j-parent/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.documents4j/documents4j)
